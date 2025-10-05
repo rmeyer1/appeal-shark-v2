@@ -25,9 +25,54 @@ describe("Zillow valuation helpers", () => {
     expect(result).toEqual({ addressLine: "123 Main St", cityStateZip: "Columbus, OH 43215" });
   });
 
+  it("normalizes full state names to abbreviations", () => {
+    const result = extractAddressComponents("1290 London Dr, Columbus, Ohio 43221");
+    expect(result).toEqual({ addressLine: "1290 London Dr", cityStateZip: "Columbus, OH 43221" });
+  });
+
+  it("queries raw address when parsing fails", async () => {
+    const zillowRequestSpy = vi.spyOn(zillowClient, "zillowRequest");
+
+    zillowRequestSpy.mockResolvedValueOnce({
+      props: [
+        {
+          zpid: "789",
+          address: "Parcel, Franklin County, OH 43000",
+          price: 410000,
+        },
+      ],
+    });
+
+    zillowRequestSpy.mockResolvedValueOnce({
+      zpid: "789",
+      price: 410000,
+      currency: "USD",
+    });
+
+    const query = "Franklin County parcel 43000";
+    const valuation = await lookupZillowValuation(query);
+    expect(valuation?.amount).toBe(410000);
+    expect(zillowRequestSpy).toHaveBeenNthCalledWith(
+      1,
+      "/propertyExtendedSearch",
+      { location: query },
+      expect.anything(),
+    );
+  });
+
   it("returns null when address cannot be parsed", async () => {
+    const zillowRequestSpy = vi
+      .spyOn(zillowClient, "zillowRequest")
+      .mockResolvedValue({ results: [], props: [] } as unknown as Awaited<
+        ReturnType<typeof zillowClient.zillowRequest>
+      >);
     const valuation = await lookupZillowValuation("Unknown");
     expect(valuation).toBeNull();
+    expect(zillowRequestSpy).toHaveBeenCalledWith(
+      "/propertyExtendedSearch",
+      { location: "Unknown" },
+      expect.anything(),
+    );
   });
 
   it("parses address without commas", () => {

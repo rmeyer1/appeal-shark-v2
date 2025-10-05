@@ -12,6 +12,74 @@ import {
 
 const lookupCache = new Map<string, ZillowValuation>();
 
+const STATE_ABBREVIATIONS = new Map<string, string>([
+  ["alabama", "AL"],
+  ["alaska", "AK"],
+  ["arizona", "AZ"],
+  ["arkansas", "AR"],
+  ["california", "CA"],
+  ["colorado", "CO"],
+  ["connecticut", "CT"],
+  ["delaware", "DE"],
+  ["district of columbia", "DC"],
+  ["florida", "FL"],
+  ["georgia", "GA"],
+  ["hawaii", "HI"],
+  ["idaho", "ID"],
+  ["illinois", "IL"],
+  ["indiana", "IN"],
+  ["iowa", "IA"],
+  ["kansas", "KS"],
+  ["kentucky", "KY"],
+  ["louisiana", "LA"],
+  ["maine", "ME"],
+  ["maryland", "MD"],
+  ["massachusetts", "MA"],
+  ["michigan", "MI"],
+  ["minnesota", "MN"],
+  ["mississippi", "MS"],
+  ["missouri", "MO"],
+  ["montana", "MT"],
+  ["nebraska", "NE"],
+  ["nevada", "NV"],
+  ["new hampshire", "NH"],
+  ["new jersey", "NJ"],
+  ["new mexico", "NM"],
+  ["new york", "NY"],
+  ["north carolina", "NC"],
+  ["north dakota", "ND"],
+  ["ohio", "OH"],
+  ["oklahoma", "OK"],
+  ["oregon", "OR"],
+  ["pennsylvania", "PA"],
+  ["rhode island", "RI"],
+  ["south carolina", "SC"],
+  ["south dakota", "SD"],
+  ["tennessee", "TN"],
+  ["texas", "TX"],
+  ["utah", "UT"],
+  ["vermont", "VT"],
+  ["virginia", "VA"],
+  ["washington", "WA"],
+  ["west virginia", "WV"],
+  ["wisconsin", "WI"],
+  ["wyoming", "WY"],
+]);
+
+function normalizeStateToken(token: string): string {
+  const trimmed = token.trim();
+  if (!trimmed) {
+    return token;
+  }
+
+  if (/^[A-Za-z]{2}$/.test(trimmed)) {
+    return trimmed.toUpperCase();
+  }
+
+  const lower = trimmed.toLowerCase();
+  return STATE_ABBREVIATIONS.get(lower) ?? trimmed;
+}
+
 export function extractAddressComponents(
   rawAddress: string | null | undefined,
 ): AddressComponents | null {
@@ -26,24 +94,25 @@ export function extractAddressComponents(
     .replace(/,?\s*USA$/i, "")
     .trim();
 
-  const commaPattern = /^(.+?),\s*([^,]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i;
+  const commaPattern = /^(.+?),\s*([^,]+),\s*([^,]+)\s+(\d{5}(?:-\d{4})?)$/i;
   const commaMatch = normalized.match(commaPattern);
 
   if (commaMatch) {
-    const [, addressLineRaw, cityRaw, stateRaw, zipRaw] = commaMatch;
+    const [, addressLineRaw, cityRaw, stateRawRaw, zipRaw] = commaMatch;
     const addressLine = addressLineRaw.trim();
     const city = cityRaw.trim();
 
     if (addressLine && city) {
-      return { addressLine, cityStateZip: `${city}, ${stateRaw.toUpperCase()} ${zipRaw}` };
+      const state = normalizeStateToken(stateRawRaw);
+      return { addressLine, cityStateZip: `${city}, ${state} ${zipRaw}` };
     }
   }
 
-  const trailingPattern = /^(.+)\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i;
+  const trailingPattern = /^(.+)\s+([^\s,]+)\s+(\d{5}(?:-\d{4})?)$/i;
   const trailingMatch = normalized.match(trailingPattern);
 
   if (trailingMatch) {
-    const [, leftRaw, stateRaw, zipRaw] = trailingMatch;
+    const [, leftRaw, stateRawRaw, zipRaw] = trailingMatch;
     const words = leftRaw.trim().split(/\s+/);
     const suffixes = new Set([
       "st",
@@ -99,7 +168,8 @@ export function extractAddressComponents(
         .trim();
 
       if (addressLine && city) {
-        return { addressLine, cityStateZip: `${city}, ${stateRaw.toUpperCase()} ${zipRaw}` };
+        const state = normalizeStateToken(stateRawRaw);
+        return { addressLine, cityStateZip: `${city}, ${state} ${zipRaw}` };
       }
     }
 
@@ -127,7 +197,7 @@ export function extractAddressComponents(
     if (candidate) {
       return {
         addressLine: candidate.addressLine,
-        cityStateZip: `${candidate.city}, ${stateRaw.toUpperCase()} ${zipRaw}`,
+        cityStateZip: `${candidate.city}, ${normalizeStateToken(stateRawRaw)} ${zipRaw}`,
       };
     }
   }
@@ -587,17 +657,21 @@ export async function lookupZillowValuation(
 ): Promise<ZillowValuation | null> {
   const components = extractAddressComponents(rawAddress);
 
-  if (!components) {
-    return null;
-  }
+  const cacheKey = components
+    ? `${components.addressLine.toLowerCase()}|${components.cityStateZip.toLowerCase()}`
+    : null;
 
-  const cacheKey = `${components.addressLine.toLowerCase()}|${components.cityStateZip.toLowerCase()}`;
-
-  if (options.useCache !== false && lookupCache.has(cacheKey)) {
+  if (cacheKey && options.useCache !== false && lookupCache.has(cacheKey)) {
     return lookupCache.get(cacheKey) ?? null;
   }
 
-  const locationQuery = `${components.addressLine} ${components.cityStateZip}`;
+  const locationQuery = components
+    ? `${components.addressLine} ${components.cityStateZip}`
+    : rawAddress.replace(/\s+/g, " ").trim();
+
+  if (!locationQuery) {
+    return null;
+  }
   const searchResponse = await zillowRequest<ZillowSearchResponse>(
     "/propertyExtendedSearch",
     {
@@ -645,7 +719,9 @@ export async function lookupZillowValuation(
     analytics,
   };
 
-  lookupCache.set(cacheKey, valuation);
+  if (cacheKey) {
+    lookupCache.set(cacheKey, valuation);
+  }
 
   return valuation;
 }
