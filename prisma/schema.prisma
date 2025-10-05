@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DocType {
+  UPLOAD
+  GENERATED
+
+  @@map("DocType")
+}
+
+enum FileSource {
+  UPLOADED
+  GENERATED
+
+  @@map("FileSource")
+}
+
+model User {
+  id             String          @id @db.Uuid
+  email          String?         @unique
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6)
+  documentGroups DocumentGroup[]
+
+  @@map("User")
+}
+
+model DocumentGroup {
+  id              String                @id @default(uuid()) @db.Uuid
+  userId          String                @db.Uuid
+  type            DocType
+  parentGroupId   String?               @db.Uuid
+  createdAt       DateTime              @default(now()) @db.Timestamptz(6)
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentGroup     DocumentGroup?        @relation("GroupToParent", fields: [parentGroupId], references: [id])
+  children        DocumentGroup[]       @relation("GroupToParent")
+  documents       Document[]
+  extraction      AssessmentExtraction?
+  valuations      PropertyValuation[]
+
+  @@index([userId, type])
+  @@index([parentGroupId])
+  @@map("DocumentGroup")
+}
+
+model Document {
+  id            String      @id @default(uuid()) @db.Uuid
+  groupId       String      @db.Uuid
+  versionNumber Int
+  storagePath   String
+  fileHash      String
+  sizeBytes     BigInt      @db.BigInt
+  mimeType      String
+  createdAt     DateTime    @default(now()) @db.Timestamptz(6)
+  isActive      Boolean     @default(true)
+  label         String?
+  source        FileSource  @default(UPLOADED)
+  group         DocumentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, versionNumber])
+  @@index([groupId])
+  @@index([storagePath])
+  @@map("Document")
+}
+
+model AssessmentExtraction {
+  id                 String         @id @default(uuid()) @db.Uuid
+  documentGroupId    String         @unique @db.Uuid
+  payload            Json
+  rawText            String?
+  model              String?
+  pdfPageCount       Int?
+  pdfCredits         Int?
+  openaiInputTokens  Int?
+  openaiOutputTokens Int?
+  openaiTotalTokens  Int?
+  createdAt          DateTime       @default(now()) @db.Timestamptz(6)
+  documentGroup      DocumentGroup  @relation(fields: [documentGroupId], references: [id], onDelete: Cascade)
+
+  @@map("AssessmentExtraction")
+}
+
+model PropertyValuation {
+  id              String         @id @default(uuid()) @db.Uuid
+  documentGroupId String         @db.Uuid @map("document_group_id")
+  provider        String
+  providerId      String?        @map("provider_id")
+  amount          Int?
+  currency        String?        @default("USD")
+  valuationDate   DateTime?      @map("valuation_date")
+  confidence      String?
+  rawResponse     Json?          @map("raw_response")
+  fetchedAt       DateTime       @default(now()) @db.Timestamptz(6) @map("fetched_at")
+  createdAt       DateTime       @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt       DateTime       @updatedAt @db.Timestamptz(6) @map("updated_at")
+  documentGroup   DocumentGroup  @relation(fields: [documentGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([documentGroupId, provider])
+  @@index([provider])
+  @@map("PropertyValuation")
+}
