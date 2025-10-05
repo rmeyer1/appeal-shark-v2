@@ -25,8 +25,8 @@ export default async function ProcessingPage({
         <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-lg dark:border-slate-700 dark:bg-slate-900">
           <h1 className="text-2xl font-semibold text-slate-900">Missing processing details</h1>
           <p className="mt-4 text-sm text-slate-600">
-            We couldn&apos;t determine which document to process. Please return to the homepage and upload your assessment
-            again.
+            We couldn&apos;t determine which document to process. Please return to the homepage and
+            upload your assessment again.
           </p>
           <Link
             href="/"

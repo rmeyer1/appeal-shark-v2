@@ -14,7 +14,9 @@ Create a `.env.local` file in `frontend/` with the following entries before runn
 ```
 SUPABASE_URL=your-supabase-instance-url
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-DATABASE_URL=postgresql://user:password@host:5432/database
+DATABASE_URL=postgresql://user:password@host:5432/database?sslmode=require
+# Optional pooled connection string used in production/serverless (pgBouncer host)
+DATABASE_POOL_URL=postgresql://user:password@pooler.supabase.com:6543/database?sslmode=require&pgbouncer=true&connection_limit=1
 PDFCO_API_KEY=your-pdfco-api-key
 OPENAI_API_KEY=your-openai-api-key
 # Optional override if you prefer a different model than the default gpt-4o-mini-2024-07-18
@@ -24,6 +26,10 @@ NEXT_PUBLIC_DEMO_USER_ID=00000000-0000-4000-8000-000000000000
 NEXT_PUBLIC_DEMO_USER_EMAIL=demo@appealshark.test
 DEMO_USER_PASSWORD=DemoUserPass123!
 ```
+
+For Vercel deployments, point `DATABASE_POOL_URL` at Supabase’s connection pooling host (port `6543`) so serverless
+functions reuse a pgBouncer-managed connection. `DATABASE_URL` can remain the direct connection string for local tools and
+Prisma CLI usage.
 
 The upload and parsing APIs use the Supabase service role on the server only. The parsing pipeline securely hands a short-lived signed URL to PDF.co, then sends the extracted text to OpenAI for structured data. Supabase encrypts bucket objects at rest by default.
 

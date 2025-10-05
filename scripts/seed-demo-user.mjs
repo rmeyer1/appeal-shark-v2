@@ -11,10 +11,29 @@ function requireEnv(name) {
   return value;
 }
 
+function ensureSslMode(url) {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.searchParams.has("sslmode")) {
+      parsed.searchParams.set("sslmode", "require");
+    }
+    return parsed.toString();
+  } catch {
+    return url.includes("?") ? `${url}&sslmode=require` : `${url}?sslmode=require`;
+  }
+}
+
 async function ensureDemoUser() {
   const supabaseUrl = requireEnv("SUPABASE_URL");
   const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
-  const databaseUrl = requireEnv("DATABASE_URL");
+  const databaseUrl =
+    process.env.DIRECT_DATABASE_URL || process.env.DATABASE_URL || process.env.DATABASE_POOL_URL;
+
+  if (!databaseUrl) {
+    throw new Error(
+      "Missing database connection string. Provide DIRECT_DATABASE_URL, DATABASE_URL, or DATABASE_POOL_URL.",
+    );
+  }
   const demoUserId = requireEnv("NEXT_PUBLIC_DEMO_USER_ID");
   const demoUserEmail = process.env.NEXT_PUBLIC_DEMO_USER_EMAIL ?? "demo@appealshark.test";
   const demoUserPassword = process.env.DEMO_USER_PASSWORD ?? "DemoUserPass123!";
@@ -29,7 +48,7 @@ async function ensureDemoUser() {
   const prisma = new PrismaClient({
     datasources: {
       db: {
-        url: databaseUrl,
+        url: ensureSslMode(databaseUrl),
       },
     },
   });
