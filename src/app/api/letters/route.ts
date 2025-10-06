@@ -6,7 +6,7 @@ import { buildLetterContext } from "@/lib/letters/context";
 import { generateAppealLetter } from "@/lib/letters/generator";
 import { renderAppealLetterPdf } from "@/lib/letters/pdf";
 import { resolveCountyMetadata } from "@/lib/letters/metadata";
-import type { LetterSectionPayload } from "@/lib/letters/types";
+import type { LetterSectionPayload } from "@/types/letters";
 import prismaClient from "@/lib/prisma";
 import {
   ensureUserDocumentsBucket,
