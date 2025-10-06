@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import AssessmentSummaryDetails from "@/components/file-upload/assessment-summary-details";
 import PropertyInsights from "@/components/file-upload/property-insights";
 import ValuationSummary from "@/components/file-upload/valuation-summary";
+import LetterGenerationPanel, { type LetterVersion } from "@/components/dashboard/letter-generation-panel";
 import ThemeToggle from "@/components/theme-toggle";
 import prismaClient from "@/lib/prisma";
+import { getSupabaseServiceRoleClient, getStorageConfig } from "@/lib/supabase";
 import type { DerivedValuation, ParsingResponse } from "@/types/assessment";
 import type { ZillowValuationAnalytics } from "@/types/zillow";
 
@@ -47,6 +49,14 @@ export default async function DashboardPage({
       valuations: true,
       documents: {
         orderBy: { createdAt: "asc" },
+      },
+      children: {
+        where: { type: "GENERATED" },
+        include: {
+          documents: {
+            orderBy: { versionNumber: "desc" },
+          },
+        },
       },
     },
   });
@@ -138,6 +148,37 @@ export default async function DashboardPage({
       ? `${uploadSizeMb.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MB`
       : "—";
 
+  const storageConfig = getStorageConfig();
+  const supabase = getSupabaseServiceRoleClient();
+
+  const letterGroup = documentGroup.children.at(0) ?? null;
+  let letterVersions: LetterVersion[] = [];
+
+  if (letterGroup) {
+    const signedUrls = await Promise.all(
+      letterGroup.documents.map(async document => {
+        const { data, error } = await supabase.storage
+          .from(storageConfig.bucketName)
+          .createSignedUrl(document.storagePath, 60 * 10);
+        if (error) {
+          return { id: document.id, url: null } as const;
+        }
+        return { id: document.id, url: data?.signedUrl ?? null } as const;
+      }),
+    );
+
+    letterVersions = letterGroup.documents.map(document => {
+      const signed = signedUrls.find(entry => entry.id === document.id);
+      return {
+        id: document.id,
+        versionNumber: document.versionNumber,
+        createdAt: document.createdAt.toISOString(),
+        label: document.label,
+        signedUrl: signed?.url ?? null,
+      } satisfies LetterVersion;
+    });
+  }
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
@@ -219,22 +260,10 @@ export default async function DashboardPage({
           </div>
 
           <div className="space-y-6">
-            <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-8 shadow-sm dark:border-emerald-400/60 dark:bg-emerald-900/30">
-              <h2 className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
-                Generate your appeal letter
-              </h2>
-              <p className="mt-3 text-sm text-emerald-900/80 dark:text-emerald-100/80">
-                We’re wiring up GPT-powered letter creation next. Soon you’ll be able to craft,
-                review, and download your county-ready appeal directly from this dashboard.
-              </p>
-              <button
-                type="button"
-                disabled
-                className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white opacity-80"
-              >
-                Coming soon
-              </button>
-            </section>
+            <LetterGenerationPanel
+              documentGroupId={documentGroupId}
+              existingLetters={letterVersions}
+            />
 
             <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">

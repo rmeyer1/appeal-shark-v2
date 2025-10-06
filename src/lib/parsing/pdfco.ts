@@ -1,17 +1,10 @@
-import type { ConvertToTextArgs, PdfCoTextExtractionResponse } from "@/types/pdfco";
+import type { ConvertToTextArgs, JobStatusResponse, PdfCoTextExtractionResponse } from "@/types/pdfco";
 
 const DEFAULT_ENDPOINT = "https://api.pdf.co/v1/pdf/convert/to/text";
 const DEFAULT_JOB_STATUS_ENDPOINT = "https://api.pdf.co/v1/job/check";
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_MAX_POLLS = 60;
 
-type JobStatusResponse = {
-  error?: boolean | string;
-  message?: string;
-  status?: string;
-  url?: string;
-  body?: string;
-};
 
 function normalizeError(messageCandidates: Array<string | boolean | undefined>, fallback: string) {
   for (const candidate of messageCandidates) {

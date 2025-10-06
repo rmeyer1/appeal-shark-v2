@@ -20,3 +20,11 @@ export type ConvertToTextArgs = {
   pollIntervalMs?: number;
   maxPolls?: number;
 };
+
+export type JobStatusResponse = {
+  error?: boolean | string;
+  message?: string;
+  status?: string;
+  url?: string;
+  body?: string;
+};
