@@ -1,10 +1,7 @@
-import { readFile } from "fs/promises";
-import { existsSync } from "fs";
-import { join, resolve } from "path";
-
 import type { CountyMetadata } from "@/types/letters";
 import type { AssessmentExtraction } from "@/types/openai";
 import type { ZillowValuationAnalytics } from "@/types/zillow";
+import pilotCountyMetadata from "@/data/pilot-counties.json";
 
 const PILOT_FIPS_TO_KEY: Record<string, string> = {
   "39049": "franklin_oh",
@@ -14,29 +11,7 @@ const PILOT_FIPS_TO_KEY: Record<string, string> = {
 
 type PilotCountyMetadata = Record<string, unknown>;
 
-let cachedMetadata: PilotCountyMetadata | null = null;
-
-async function loadPilotMetadata(): Promise<PilotCountyMetadata> {
-  if (cachedMetadata) {
-    return cachedMetadata;
-  }
-
-  const candidatePaths = [
-    join(process.cwd(), "docs", "metadata", "pilot-counties.json"),
-    join(process.cwd(), "..", "docs", "metadata", "pilot-counties.json"),
-    resolve(process.cwd(), "../docs/metadata/pilot-counties.json"),
-  ];
-
-  const filePath = candidatePaths.find(path => existsSync(path));
-
-  if (!filePath) {
-    throw new Error("docs/metadata/pilot-counties.json could not be located. Ensure docs are synced.");
-  }
-
-  const raw = await readFile(filePath, "utf-8");
-  cachedMetadata = JSON.parse(raw) as PilotCountyMetadata;
-  return cachedMetadata;
-}
+const cachedMetadata: PilotCountyMetadata = pilotCountyMetadata as PilotCountyMetadata;
 
 function extractPrimaryAuthority(meta: Record<string, unknown>): string | null {
   if (typeof meta.appeal_authority === "object" && meta.appeal_authority !== null) {
@@ -166,7 +141,7 @@ export async function resolveCountyMetadata(
   analytics: ZillowValuationAnalytics | null,
   assessment: AssessmentExtraction,
 ): Promise<CountyMetadata | null> {
-  const metadata = await loadPilotMetadata();
+  const metadata = cachedMetadata;
 
   let key: string | undefined;
   const countyFips = analytics?.countyFips ?? undefined;

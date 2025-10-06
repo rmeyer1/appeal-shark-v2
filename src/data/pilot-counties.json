@@ -1,0 +1,168 @@
+{
+  "franklin_oh": {
+    "jurisdiction": "Franklin County, Ohio",
+    "tax_year": 2024,
+    "appeal_authority": {
+      "name": "Franklin County Board of Revision",
+      "website": "https://www.franklincountyauditor.com/real-estate/board-of-revision",
+      "contact": {
+        "email": "[email protected]",
+        "phone": "614-525-3913",
+        "fax": "614-525-6252",
+        "mailing_address": "Franklin County Board of Revision, 373 S. High St., 20th Floor, Columbus, OH 43215"
+      }
+    },
+    "filing_window": {
+      "start_date": "2024-11-08",
+      "end_date": "2025-03-31",
+      "timezone": "America/New_York",
+      "notes": "Tax year 2024 complaints accepted beginning November 8, 2024 and must be filed or postmarked by March 31, 2025."
+    },
+    "submission_channels": [
+      {
+        "type": "online",
+        "label": "BOR e-File Portal",
+        "url": "https://www.franklincountyauditor.com/real-estate/board-of-revision"
+      },
+      {
+        "type": "email",
+        "value": "[email protected]"
+      },
+      {
+        "type": "fax",
+        "value": "614-525-6252"
+      },
+      {
+        "type": "mail",
+        "address": "Franklin County Board of Revision, 373 S. High St., 20th Floor, Columbus, OH 43215",
+        "postmark_requirement": "Postmarked by March 31"
+      },
+      {
+        "type": "in_person",
+        "address": "373 S. High St., 20th Floor, Columbus, OH 43215"
+      }
+    ],
+    "forms": [
+      {
+        "name": "DTE 1 - Complaint Against the Valuation of Real Property",
+        "url": "https://audr-forms.franklincountyohio.gov/htmlforms/frmEntry.aspx?form=bor-dte1"
+      },
+      {
+        "name": "Board of Revision Form Center",
+        "url": "https://www.franklincountyauditor.com/how-do-i/forms/form-center/All-Forms-By-Name/Board-of-Revision"
+      }
+    ],
+    "hearing_format": "Hearings default to Zoom; request an in-person session at least 10 days before the scheduled date."
+  },
+  "cook_il": {
+    "jurisdiction": "Cook County, Illinois",
+    "tax_year": 2025,
+    "appeal_authorities": {
+      "assessor": {
+        "name": "Cook County Assessor's Office",
+        "website": "https://www.cookcountyassessor.com/online-appeals"
+      },
+      "board_of_review": {
+        "name": "Cook County Board of Review",
+        "website": "https://www.cookcountyboardofreview.com/forms"
+      }
+    },
+    "filing_windows": {
+      "assessor": {
+        "calendar_url": "https://www.cookcountyassessor.com/assessment-calendar-and-deadlines",
+        "notes": "Appeal windows open by township. Example 2025 deadlines: Evanston last file date May 21, New Trier June 5, Maine July 18."
+      },
+      "board_of_review": {
+        "calendar_url": "https://www.cookcountyassessor.com/assessment-calendar-and-deadlines",
+        "notes": "Board of Review windows follow assessor certifications. Example 2025 windows: Evanston July 7-August 5, New Trier August 18-September 16, Maine September 22-October 31."
+      }
+    },
+    "submission_channels": {
+      "assessor": [
+        {
+          "type": "online",
+          "label": "SmartFile appeal portal",
+          "url": "https://www.cookcountyassessor.com/online-appeals"
+        },
+        {
+          "type": "mail_or_dropoff",
+          "address": "Cook County Assessor, 118 N. Clark St., Room 320, Chicago, IL 60602",
+          "note": "Paper forms accepted only when online filing is not possible."
+        }
+      ],
+      "board_of_review": [
+        {
+          "type": "online",
+          "label": "Board of Review Appeals Portal",
+          "url": "https://appeals.cookcountyboardofreview.com/"
+        },
+        {
+          "type": "in_person",
+          "address": "Cook County Board of Review, 118 N. Clark St., Chicago, IL 60602"
+        }
+      ]
+    },
+    "forms": {
+      "assessor": [
+        {
+          "name": "Residential Appeal Form (PDF backup)",
+          "url": "https://www.cookcountyassessor.com/form-document/residential-appeal-form"
+        },
+        {
+          "name": "Industrial/Commercial Appeal Form",
+          "url": "https://www.cookcountyassessor.com/form-document/industrial-commercial-property-appeal-form"
+        }
+      ],
+      "board_of_review": [
+        {
+          "name": "2025 Complaint Form",
+          "url": "https://www.cookcountyboardofreview.com/forms"
+        },
+        {
+          "name": "Attorney Authorization Form",
+          "url": "https://www.cookcountyboardofreview.com/forms"
+        }
+      ]
+    },
+    "notes": "Cook County follows a triennial reassessment cycle; confirm township-specific appeal windows before filing each season."
+  },
+  "travis_tx": {
+    "jurisdiction": "Travis County, Texas",
+    "tax_year": 2025,
+    "appeal_authority": {
+      "name": "Travis Central Appraisal District",
+      "website": "https://traviscad.org/protests"
+    },
+    "filing_deadline": {
+      "standard_deadline": "2025-05-15",
+      "alternate_rule": "Or 30 days after the Notice of Appraised Value is delivered, whichever is later.",
+      "timezone": "America/Chicago"
+    },
+    "submission_channels": [
+      {
+        "type": "online",
+        "label": "TCAD e-File Portal",
+        "url": "https://traviscad.org/efile/"
+      },
+      {
+        "type": "mail",
+        "address": "Travis Central Appraisal District, PO Box 149012, Austin, TX 78714"
+      },
+      {
+        "type": "in_person",
+        "address": "850 E Anderson Lane, Austin, TX 78752"
+      }
+    ],
+    "forms": [
+      {
+        "name": "Texas Comptroller Form 50-132 - Property Owner's Notice of Protest",
+        "url": "https://comptroller.texas.gov/forms/50-132.pdf"
+      },
+      {
+        "name": "TCAD Protest Filing Guide",
+        "url": "https://traviscad.org/protests"
+      }
+    ],
+    "process_notes": "Online protests provide confirmation numbers and access to evidence packets before Appraisal Review Board hearings."
+  }
+}
