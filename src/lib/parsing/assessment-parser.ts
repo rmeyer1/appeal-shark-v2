@@ -1,29 +1,6 @@
 import { convertPdfToText } from "@/lib/parsing/pdfco";
 import { extractAssessmentFields } from "@/lib/parsing/openai";
-import type { AssessmentExtractionResult } from "@/types/openai";
-
-export type AssessmentParseOptions = {
-  signedUrl: string;
-  pdfcoApiKey: string;
-  openaiApiKey: string;
-  openaiModel?: string;
-  clients?: {
-    pdfcoFetch?: typeof fetch;
-    openaiFetch?: typeof fetch;
-  };
-};
-
-export type AssessmentParseResult = {
-  rawText: string;
-  extracted: AssessmentExtractionResult["structured"];
-  metadata: {
-    pdfco: {
-      pageCount: number | null;
-      credits: number | null;
-    };
-    openai: AssessmentExtractionResult["usage"];
-  };
-};
+import type { AssessmentParseOptions, AssessmentParseResult } from "@/types/pdfco";
 
 export async function parseAssessmentDocument({
   signedUrl,

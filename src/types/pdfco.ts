@@ -1,3 +1,5 @@
+import type { AssessmentExtractionResult } from "./openai";
+
 export type PdfCoTextExtractionResponse = {
   body?: string;
   pageCount?: number;
@@ -27,4 +29,27 @@ export type JobStatusResponse = {
   status?: string;
   url?: string;
   body?: string;
+};
+
+export type AssessmentParseOptions = {
+  signedUrl: string;
+  pdfcoApiKey: string;
+  openaiApiKey: string;
+  openaiModel?: string;
+  clients?: {
+    pdfcoFetch?: typeof fetch;
+    openaiFetch?: typeof fetch;
+  };
+};
+
+export type AssessmentParseResult = {
+  rawText: string;
+  extracted: AssessmentExtractionResult["structured"];
+  metadata: {
+    pdfco: {
+      pageCount: number | null;
+      credits: number | null;
+    };
+    openai: AssessmentExtractionResult["usage"];
+  };
 };

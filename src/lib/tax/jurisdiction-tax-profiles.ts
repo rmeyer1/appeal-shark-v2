@@ -1,9 +1,5 @@
 import prismaClient from "@/lib/prisma";
-
-type ProfileCacheEntry = {
-  ratio: number | null;
-  expiresAt: number;
-};
+import type { ProfileCacheEntry } from "@/types/jurisdiction";
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // five minutes
 const ratioCache = new Map<string, ProfileCacheEntry>();

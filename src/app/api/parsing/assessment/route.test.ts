@@ -102,9 +102,11 @@ describe("POST /api/parsing/assessment", () => {
       propertyDetail: { zpid: "999999" },
       analytics: {
         countyFips: "39049",
+        assessmentRatioUsed: null,
         valuationRange: { highEstimate: null, highPercent: null },
         taxHistory: [],
         latest: null,
+        averageMillageRate: null,
         averageEffectiveTaxRate: null,
         projectedTaxAtMarket: null,
         projectedSavingsVsLatest: null,
@@ -139,22 +141,24 @@ describe("POST /api/parsing/assessment", () => {
       zpid: "999999",
       confidence: "HIGH",
       valuationDate: "2025-01-15T00:00:00.000Z",
-      analytics: {
-        countyFips: "39049",
-        valuationRange: { highEstimate: null, highPercent: null },
-        taxHistory: [],
-        latest: null,
-        averageEffectiveTaxRate: null,
-        projectedTaxAtMarket: null,
-        projectedSavingsVsLatest: null,
-        propertyFacts: {
-          livingArea: null,
-          bedrooms: null,
-          bathrooms: null,
-          pricePerSquareFoot: null,
+        analytics: {
+          countyFips: "39049",
+          assessmentRatioUsed: null,
+          valuationRange: { highEstimate: null, highPercent: null },
+          taxHistory: [],
+          latest: null,
+          averageMillageRate: null,
+          averageEffectiveTaxRate: null,
+          projectedTaxAtMarket: null,
+          projectedSavingsVsLatest: null,
+          propertyFacts: {
+            livingArea: null,
+            bedrooms: null,
+            bathrooms: null,
+            pricePerSquareFoot: null,
+          },
+          latestSale: null,
         },
-        latestSale: null,
-      },
     });
     expect(parseAssessmentMock).toHaveBeenCalledWith(
       expect.objectContaining({
