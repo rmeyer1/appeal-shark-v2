@@ -5,12 +5,12 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // five minutes
 const ratioCache = new Map<string, ProfileCacheEntry>();
 
 async function fetchAssessmentRatio(countyFips: string): Promise<number | null> {
-  const record = await prismaClient.jurisdictionTaxProfile.findUnique({
-    where: { fips: countyFips },
-    select: { defaultAssessmentRatio: true },
-  });
+  const rows = await prismaClient.$queryRaw<
+    Array<{ default_assessment_ratio: number | null }>
+  >`SELECT default_assessment_ratio FROM jurisdiction_tax_profile WHERE fips = ${countyFips} LIMIT 1`;
 
-  return record?.defaultAssessmentRatio ?? null;
+  const [row] = rows;
+  return row?.default_assessment_ratio ?? null;
 }
 
 export async function getAssessmentRatioForCounty(
