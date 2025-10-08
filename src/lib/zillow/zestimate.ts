@@ -9,6 +9,7 @@ import {
   type ZillowValuation,
   type ZillowValuationAnalytics,
 } from "@/types/zillow";
+import { getAssessmentRatioForCounty } from "@/lib/tax/jurisdiction-tax-profiles";
 
 const lookupCache = new Map<string, ZillowValuation>();
 
@@ -339,7 +340,7 @@ function parseTaxHistory(property: ZillowPropertyResponse | null): ZillowTaxHist
     const taxIncreaseRate = toNumber(record.taxIncreaseRate);
     const valueIncreaseRate = toNumber(record.valueIncreaseRate);
 
-    const effectiveTaxRate =
+    const millageRate =
       assessedValue && assessedValue > 0 && taxPaid !== null ? taxPaid / assessedValue : null;
 
     entries.push({
@@ -348,7 +349,8 @@ function parseTaxHistory(property: ZillowPropertyResponse | null): ZillowTaxHist
       taxPaid,
       taxIncreaseRate,
       valueIncreaseRate,
-      effectiveTaxRate,
+      millageRate,
+      effectiveTaxRate: millageRate,
     });
   }
 
@@ -510,25 +512,53 @@ function deriveLatestSale(property: ZillowPropertyResponse | null) {
   };
 }
 
+type AnalyticsOverrides = {
+  countyFips?: string | null;
+  assessmentRatio?: number | null;
+};
+
 function deriveAnalytics(
   property: ZillowPropertyResponse | null,
   marketValue: number | null,
+  overrides: AnalyticsOverrides = {},
 ): ZillowValuationAnalytics | null {
   if (!property) {
     return null;
   }
 
-  const taxHistory = parseTaxHistory(property);
+  const countyFipsRaw = overrides.countyFips ?? (property as { countyFIPS?: unknown } | null | undefined)?.countyFIPS;
+  const countyFips =
+    typeof countyFipsRaw === "string" && countyFipsRaw.trim().length > 0
+      ? countyFipsRaw.trim()
+      : null;
+
+  const resolvedRatio = overrides.assessmentRatio ?? null;
+  const assessmentRatio = resolvedRatio ?? 1;
+
+  const taxHistoryRaw = parseTaxHistory(property);
+  const taxHistory = taxHistoryRaw.map(entry => {
+    const effectiveTaxRate =
+      entry.millageRate !== null ? entry.millageRate * assessmentRatio : null;
+    return {
+      ...entry,
+      effectiveTaxRate,
+    } satisfies ZillowTaxHistoryEntry;
+  });
+
   const latest = taxHistory[0] ?? null;
   const prior = taxHistory[1] ?? null;
+
+  const averageMillageRate = average(
+    taxHistory.slice(0, 5).map(entry => entry.millageRate ?? null),
+  );
 
   const averageEffectiveTaxRate = average(
     taxHistory.slice(0, 5).map(entry => entry.effectiveTaxRate ?? null),
   );
 
   const projectedTaxAtMarket =
-    marketValue !== null && averageEffectiveTaxRate !== null
-      ? Math.round(marketValue * averageEffectiveTaxRate)
+    marketValue !== null && averageMillageRate !== null
+      ? Math.round(marketValue * assessmentRatio * averageMillageRate)
       : null;
 
   const projectedSavingsVsLatest =
@@ -536,12 +566,9 @@ function deriveAnalytics(
       ? Math.round(latest.taxPaid - projectedTaxAtMarket)
       : null;
 
-  const countyFipsRaw = (property as { countyFIPS?: unknown } | null | undefined)?.countyFIPS;
-  const countyFips =
-    typeof countyFipsRaw === "string" && countyFipsRaw.trim().length > 0 ? countyFipsRaw : null;
-
   return {
     countyFips,
+    assessmentRatioUsed: resolvedRatio ?? null,
     valuationRange: deriveValuationRange(property, marketValue),
     taxHistory,
     latest: latest
@@ -549,6 +576,7 @@ function deriveAnalytics(
           year: latest.year,
           assessedValue: latest.assessedValue,
           taxPaid: latest.taxPaid,
+          millageRate: latest.millageRate,
           effectiveTaxRate: latest.effectiveTaxRate,
           taxChangeAmount:
             latest.taxPaid !== null && prior?.taxPaid !== null
@@ -560,6 +588,7 @@ function deriveAnalytics(
               : null,
         }
       : null,
+    averageMillageRate,
     averageEffectiveTaxRate,
     projectedTaxAtMarket,
     projectedSavingsVsLatest,
@@ -705,7 +734,16 @@ export async function lookupZillowValuation(
   const currency = deriveCurrency(bestHit, propertyDetail);
   const confidence = deriveConfidence(propertyDetail);
   const valuationDate = deriveValuationDate(propertyDetail);
-  const analytics = deriveAnalytics(propertyDetail, amount);
+  const countyFipsRaw = (propertyDetail as { countyFIPS?: unknown } | null | undefined)?.countyFIPS;
+  const countyFips =
+    typeof countyFipsRaw === "string" && countyFipsRaw.trim().length > 0
+      ? countyFipsRaw.trim()
+      : null;
+  const assessmentRatio = await getAssessmentRatioForCounty(countyFips);
+  const analytics = deriveAnalytics(propertyDetail, amount, {
+    countyFips,
+    assessmentRatio,
+  });
 
   const valuation: ZillowValuation = {
     provider: "zillow",

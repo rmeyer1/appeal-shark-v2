@@ -78,6 +78,11 @@ function stringifyContext(context: LetterContext): string {
 
   if (analytics) {
     lines.push("Zillow Analytics:");
+    if (analytics.assessmentRatioUsed !== null && analytics.assessmentRatioUsed !== undefined) {
+      lines.push(
+        `  Assessment Ratio (taxable portion of market value): ${(analytics.assessmentRatioUsed * 100).toFixed(2)}%`,
+      );
+    }
     if (analytics.projectedSavingsVsLatest !== null && analytics.projectedSavingsVsLatest !== undefined) {
       lines.push(`  Projected Savings vs Latest Tax Bill: $${analytics.projectedSavingsVsLatest}`);
     }
@@ -89,10 +94,22 @@ function stringifyContext(context: LetterContext): string {
         const year = entry.year ?? "Unknown";
         const assessed = entry.assessedValue ?? "Unknown";
         const taxPaid = entry.taxPaid ?? "Unknown";
-        return `    Year ${year}: assessed=${assessed}, taxPaid=${taxPaid}`;
+        const millage = entry.millageRate !== null && entry.millageRate !== undefined
+          ? `${(entry.millageRate * 1000).toFixed(2)} mills`
+          : "millage=n/a";
+        const effectiveRate =
+          entry.effectiveTaxRate !== null && entry.effectiveTaxRate !== undefined
+            ? `${(entry.effectiveTaxRate * 100).toFixed(2)}%`
+            : "rate=n/a";
+        return `    Year ${year}: assessed=${assessed}, taxPaid=${taxPaid}, ${millage}, effective=${effectiveRate}`;
       });
       lines.push("  Recent Tax History:");
       lines.push(...historyLines);
+    }
+    if (analytics.latest?.millageRate !== null && analytics.latest?.millageRate !== undefined) {
+      lines.push(
+        `  Current Millage (per $1,000 taxable): ${(analytics.latest.millageRate * 1000).toFixed(2)} mills`,
+      );
     }
   }
 

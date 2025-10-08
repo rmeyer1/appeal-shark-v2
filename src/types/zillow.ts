@@ -21,11 +21,13 @@ export type ZillowTaxHistoryEntry = {
   taxPaid: number | null;
   taxIncreaseRate: number | null;
   valueIncreaseRate: number | null;
+  millageRate: number | null;
   effectiveTaxRate: number | null;
 };
 
 export type ZillowValuationAnalytics = {
   countyFips: string | null;
+  assessmentRatioUsed: number | null;
   valuationRange: {
     highEstimate: number | null;
     highPercent: number | null;
@@ -35,10 +37,12 @@ export type ZillowValuationAnalytics = {
     year: number;
     assessedValue: number | null;
     taxPaid: number | null;
+    millageRate: number | null;
     effectiveTaxRate: number | null;
     taxChangeAmount: number | null;
     effectiveRateDelta: number | null;
   } | null;
+  averageMillageRate: number | null;
   averageEffectiveTaxRate: number | null;
   projectedTaxAtMarket: number | null;
   projectedSavingsVsLatest: number | null;

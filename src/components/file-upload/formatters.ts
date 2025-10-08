@@ -61,3 +61,19 @@ export function formatDate(value: string | null): string | null {
     day: "numeric",
   });
 }
+
+export function formatMillage(value: number | null, fractionDigits = 1): string | null {
+  if (value === null || Number.isNaN(value)) {
+    return null;
+  }
+
+  return `${(value * 1000).toFixed(fractionDigits)} mills`;
+}
+
+export function formatRatioPercent(value: number | null, fractionDigits = 1): string | null {
+  if (value === null || Number.isNaN(value)) {
+    return null;
+  }
+
+  return `${(value * 100).toFixed(fractionDigits)}%`;
+}

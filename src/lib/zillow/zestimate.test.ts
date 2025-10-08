@@ -7,12 +7,27 @@ import {
 } from "@/lib/zillow/zestimate";
 import * as zillowClient from "@/lib/zillow/client";
 
+const { ratioMock } = vi.hoisted(() => ({
+  ratioMock: vi.fn(
+    async (fips: string | null | undefined) => (fips === "39049" ? 0.35 : null),
+  ),
+}));
+
+vi.mock("@/lib/tax/jurisdiction-tax-profiles", () => ({
+  getAssessmentRatioForCounty: ratioMock,
+  clearAssessmentRatioCache: vi.fn(),
+}));
+
 const envZillowKey = process.env.ZILLOW_API_KEY;
 
 describe("Zillow valuation helpers", () => {
   beforeEach(() => {
     clearZillowLookupCache();
     vi.restoreAllMocks();
+    ratioMock.mockReset();
+    ratioMock.mockImplementation(async (fips: string | null | undefined) =>
+      fips === "39049" ? 0.35 : null,
+    );
     process.env.ZILLOW_API_KEY = "test-key";
   });
 
@@ -111,14 +126,14 @@ describe("Zillow valuation helpers", () => {
         taxHistory: [
           {
             time: new Date("2024-01-01T00:00:00Z").getTime(),
-            value: 400000,
+            value: 141800,
             taxPaid: 10000,
             taxIncreaseRate: 0.05,
             valueIncreaseRate: 0.03,
           },
           {
             time: new Date("2023-01-01T00:00:00Z").getTime(),
-            value: 380000,
+            value: 135000,
             taxPaid: 9500,
             taxIncreaseRate: 0.02,
             valueIncreaseRate: 0.01,
@@ -155,9 +170,13 @@ describe("Zillow valuation helpers", () => {
     expect(valuation?.analytics?.countyFips).toBe("39049");
     expect(valuation?.analytics?.taxHistory).toHaveLength(2);
     expect(valuation?.analytics?.taxHistory?.[0]?.year).toBe(2024);
-    expect(valuation?.analytics?.averageEffectiveTaxRate).toBeCloseTo(0.025, 6);
-    expect(valuation?.analytics?.projectedTaxAtMarket).toBe(10128);
-    expect(valuation?.analytics?.projectedSavingsVsLatest).toBe(-128);
+    expect(valuation?.analytics?.assessmentRatioUsed).toBeCloseTo(0.35, 6);
+    expect(valuation?.analytics?.averageMillageRate).toBeCloseTo(0.070446, 6);
+    expect(valuation?.analytics?.averageEffectiveTaxRate).toBeCloseTo(0.024656, 6);
+    expect(valuation?.analytics?.projectedTaxAtMarket).toBe(9989);
+    expect(valuation?.analytics?.projectedSavingsVsLatest).toBeCloseTo(11, 1);
+    expect(valuation?.analytics?.latest?.millageRate).toBeCloseTo(0.070522, 6);
+    expect(valuation?.analytics?.latest?.effectiveTaxRate).toBeCloseTo(0.024683, 6);
     expect(valuation?.analytics?.propertyFacts.livingArea).toBe(2100);
     expect(valuation?.analytics?.valuationRange?.highEstimate).toBe(465891);
   });

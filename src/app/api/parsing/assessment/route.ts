@@ -83,9 +83,11 @@ export async function POST(request: NextRequest) {
           const analyticsForResponse = valuation.analytics
             ? {
                 countyFips: valuation.analytics.countyFips,
+                assessmentRatioUsed: valuation.analytics.assessmentRatioUsed,
                 valuationRange: valuation.analytics.valuationRange,
                 taxHistory: valuation.analytics.taxHistory,
                 latest: valuation.analytics.latest,
+                averageMillageRate: valuation.analytics.averageMillageRate,
                 averageEffectiveTaxRate: valuation.analytics.averageEffectiveTaxRate,
                 projectedTaxAtMarket: valuation.analytics.projectedTaxAtMarket,
                 projectedSavingsVsLatest: valuation.analytics.projectedSavingsVsLatest,

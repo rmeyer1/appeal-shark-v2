@@ -3,7 +3,9 @@ import {
   formatCurrency,
   formatCurrencySigned,
   formatDate,
+  formatMillage,
   formatRatePercent,
+  formatRatioPercent,
 } from "@/components/file-upload/formatters";
 
 type ValuationSummaryProps = {
@@ -29,11 +31,17 @@ export default function ValuationSummary({ valuation }: ValuationSummaryProps) {
   const latestTaxPaid = analytics.latest?.taxPaid ?? null;
   const latestYear = analytics.latest?.year ?? null;
   const latestEffectiveRate = analytics.latest?.effectiveTaxRate ?? null;
+  const latestTaxableBase = analytics.latest?.assessedValue ?? null;
+  const latestMillage = analytics.latest?.millageRate ?? null;
   const projectedTax = analytics.projectedTaxAtMarket ?? null;
   const projectedSavings = analytics.projectedSavingsVsLatest ?? null;
   const averageRate = analytics.averageEffectiveTaxRate ?? null;
+  const averageMillage = analytics.averageMillageRate ?? null;
+  const assessmentRatio = analytics.assessmentRatioUsed ?? null;
   const hasSavings = projectedSavings !== null && projectedSavings > 0;
   const hasIncrease = projectedSavings !== null && projectedSavings < 0;
+  const ratioLabel = formatRatioPercent(assessmentRatio);
+  const ratioDescription = ratioLabel ? `${ratioLabel} taxable ratio` : "local taxable ratio";
 
   return (
     <div className="mt-4 grid gap-4 md:grid-cols-3">
@@ -51,12 +59,20 @@ export default function ValuationSummary({ valuation }: ValuationSummaryProps) {
             <dd>{latestYear ?? "—"}</dd>
           </div>
           <div className="flex justify-between gap-3">
+            <dt className="font-medium">Taxable value</dt>
+            <dd>{formatCurrency(latestTaxableBase) ?? "—"}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
             <dt className="font-medium">Effective rate</dt>
             <dd>{formatRatePercent(latestEffectiveRate) ?? "—"}</dd>
           </div>
+          <div className="flex justify-between gap-3">
+            <dt className="font-medium">Effective millage</dt>
+            <dd>{formatMillage(latestMillage) ?? "—"}</dd>
+          </div>
         </dl>
         <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-          Based on the most recent tax history Zillow provided for this parcel.
+          Based on the most recent tax history Zillow provided for this parcel and the county taxable base.
         </p>
       </div>
 
@@ -70,8 +86,16 @@ export default function ValuationSummary({ valuation }: ValuationSummaryProps) {
             <dd>{formatCurrency(projectedTax) ?? "Model unavailable"}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="font-medium">Modeled rate</dt>
+            <dt className="font-medium">Modeled effective rate</dt>
             <dd>{formatRatePercent(averageRate) ?? "—"}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="font-medium">Average millage used</dt>
+            <dd>{formatMillage(averageMillage) ?? "—"}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="font-medium">Assessment ratio</dt>
+            <dd>{ratioLabel ?? "—"}</dd>
           </div>
           <div className="flex justify-between gap-3">
             <dt className="font-medium">Market value source</dt>
@@ -118,15 +142,20 @@ export default function ValuationSummary({ valuation }: ValuationSummaryProps) {
           {projectedSavings === null
             ? "Awaiting projection"
             : hasSavings
-              ? "Potential annual savings if your assessed value is reduced to market."
+              ? `Potential annual savings if the county keeps its ${ratioDescription} and current millage.`
               : hasIncrease
-                ? "Model suggests taxes could increase if the valuation rises to market."
+                ? `Model suggests taxes could increase under the same ${ratioDescription}.`
                 : "No material change projected."}
         </p>
         {valuation.savings !== null ? (
           <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
             Raw valuation delta: {formatCurrencySigned(valuation.savings)} (assessed vs. market).
-            Actual tax outcomes depend on local rules.
+            Actual tax outcomes depend on local rules and exemptions.
+          </p>
+        ) : null}
+        {ratioLabel ? (
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Calculations use the county&apos;s {ratioDescription} to convert market value into the taxable base.
           </p>
         ) : null}
       </div>

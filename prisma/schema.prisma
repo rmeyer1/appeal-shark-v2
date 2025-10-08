@@ -85,6 +85,20 @@ model AssessmentExtraction {
   @@map("AssessmentExtraction")
 }
 
+model JurisdictionTaxProfile {
+  fips                   String   @id
+  displayName            String   @map("display_name")
+  defaultAssessmentRatio Float?   @map("default_assessment_ratio")
+  assessmentRatioRules   Json?    @map("assessment_ratio_rules")
+  millageSources         Json?    @map("millage_sources")
+  exemptionRules         Json?    @map("exemption_rules")
+  overrides              Json?    @map("overrides_json")
+  createdAt              DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt              DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  @@map("jurisdiction_tax_profile")
+}
+
 model PropertyValuation {
   id              String         @id @default(uuid()) @db.Uuid
   documentGroupId String         @db.Uuid @map("document_group_id")
