@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AssessmentSummaryDetails from "@/components/file-upload/assessment-summary-details";
-import PropertyInsights from "@/components/file-upload/property-insights";
-import ValuationSummary from "@/components/file-upload/valuation-summary";
+import ComparableSales from "@/components/dashboard/comparable-sales";
+import TaxInsightsCarousel from "@/components/dashboard/tax-insights-carousel";
 import LetterGenerationPanel, { type LetterVersion } from "@/components/dashboard/letter-generation-panel";
 import ThemeToggle from "@/components/theme-toggle";
 import prismaClient from "@/lib/prisma";
 import { getSupabaseServiceRoleClient, getStorageConfig } from "@/lib/supabase";
 import type { DerivedValuation, ParsingResponse } from "@/types/assessment";
 import type { ZillowValuationAnalytics } from "@/types/zillow";
+import type { ComparableSale } from "@/types/dashboard";
 
 function isUuid(value: string) {
   return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(
@@ -29,6 +30,176 @@ function formatDateTime(value: Date | null | undefined) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function extractComparableSales(raw: unknown): { sales: ComparableSale[]; lastUpdatedIso: string | null } {
+  if (!isRecord(raw)) {
+    return { sales: [], lastUpdatedIso: null };
+  }
+
+  const detail = isRecord(raw.propertyDetail) ? (raw.propertyDetail as Record<string, unknown>) : null;
+
+  if (!detail || !Array.isArray(detail.nearbyHomes)) {
+    return { sales: [], lastUpdatedIso: null };
+  }
+
+  const nearbyHomes = detail.nearbyHomes as unknown[];
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  sixMonthsAgo.setHours(0, 0, 0, 0);
+  const datedSales: Array<{ sale: ComparableSale; soldDate: Date }> = [];
+  const undatedSales: ComparableSale[] = [];
+
+  let fallbackCounter = 0;
+
+  for (const entry of nearbyHomes) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+
+    const statusRaw = entry.homeStatus;
+    const status = typeof statusRaw === "string" ? statusRaw.trim().toUpperCase() : "";
+    if (status !== "SOLD") {
+      continue;
+    }
+
+    fallbackCounter += 1;
+
+    const sale: ComparableSale = {
+      id: inferId(entry, fallbackCounter),
+      address: inferAddress(entry),
+      price: toNumber(entry.price),
+      squareFeet: toNumber(entry.livingAreaValue ?? entry.livingArea),
+      bedrooms: toNumber(entry.bedrooms),
+      bathrooms: toNumber(entry.bathrooms ?? entry.bathroomsFloat),
+      soldDate: null,
+    };
+
+    const rawSoldDate = extractSoldDate(entry);
+    const soldDate = rawSoldDate ? parseDate(rawSoldDate) : null;
+
+    if (soldDate && soldDate >= sixMonthsAgo) {
+      sale.soldDate = soldDate.toISOString();
+      datedSales.push({ sale, soldDate });
+    } else if (soldDate) {
+      // Older than six months; ignore.
+      continue;
+    } else {
+      undatedSales.push(sale);
+    }
+  }
+
+  datedSales.sort((a, b) => b.soldDate.getTime() - a.soldDate.getTime());
+
+  const sales: ComparableSale[] = datedSales.map(entry => entry.sale);
+
+  if (sales.length < 3) {
+    sales.push(...undatedSales.slice(0, 3 - sales.length));
+  }
+
+  const mostRecent = datedSales[0]?.soldDate ?? null;
+
+  return {
+    sales: sales.slice(0, 3),
+    lastUpdatedIso: mostRecent ? mostRecent.toISOString() : null,
+  };
+}
+
+function inferId(record: Record<string, unknown>, fallbackIndex: number): string {
+  const zpid = record.zpid;
+  if (typeof zpid === "string" && zpid.trim().length > 0) {
+    return zpid;
+  }
+  if (typeof zpid === "number") {
+    return String(zpid);
+  }
+  return `comp-${fallbackIndex}`;
+}
+
+function inferAddress(record: Record<string, unknown>): string {
+  const address = record.address;
+  if (isRecord(address)) {
+    const street = typeof address.streetAddress === "string" ? address.streetAddress.trim() : "";
+    const city = typeof address.city === "string" ? address.city.trim() : "";
+    const state = typeof address.state === "string" ? address.state.trim() : "";
+    const zipcode = typeof address.zipcode === "string" ? address.zipcode.trim() : "";
+    const parts = [street, city, state, zipcode].filter(Boolean);
+    if (parts.length > 0) {
+      return parts.join(", ");
+    }
+  }
+
+  const formattedChip = record.formattedChip;
+  if (isRecord(formattedChip) && Array.isArray(formattedChip.location)) {
+    const location = formattedChip.location
+      .map(entry => (isRecord(entry) && typeof entry.fullValue === "string" ? entry.fullValue.trim() : ""))
+      .filter(Boolean);
+    if (location.length > 0) {
+      return location.join(", ");
+    }
+  }
+
+  const url = typeof record.hdpUrl === "string" ? record.hdpUrl : null;
+  if (url) {
+    return url;
+  }
+
+  return "Comparable sale";
+}
+
+function toNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value.replace(/[^0-9.\-]/g, ""));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function extractSoldDate(record: Record<string, unknown>): unknown {
+  const candidates = [
+    record.dateSold,
+    record.soldDate,
+    record.lastSoldDate,
+    record.soldTime,
+    record.lastSoldTime,
+    record.saleDate,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate !== undefined && candidate !== null) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function parseDate(value: unknown): Date | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const timestamp = value > 1e12 ? value : value * 1000;
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const date = new Date(trimmed);
+    if (!Number.isNaN(date.getTime())) {
+      return date;
+    }
+
+    const fallback = new Date(`${trimmed}T00:00:00`);
+    return Number.isNaN(fallback.getTime()) ? null : fallback;
+  }
+
+  return null;
 }
 
 export default async function DashboardPage({
@@ -136,6 +307,10 @@ export default async function DashboardPage({
         valuation: derivedValuation?.zillow ?? null,
       }
     : null;
+
+  const { sales: comparableSales, lastUpdatedIso: comparableLastUpdatedIso } = extractComparableSales(
+    zillowRecord?.rawResponse ?? null,
+  );
 
   const uploadedDocument = documentGroup.documents[0] ?? null;
   const uploadedAt = uploadedDocument?.createdAt ?? null;
@@ -250,13 +425,10 @@ export default async function DashboardPage({
               <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                 Tax impact overview
               </h2>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                We model how your annual tax bill could shift if the assessment aligns with Zillow’s
-                market view.
-              </p>
-              <ValuationSummary valuation={derivedValuation} />
-              <PropertyInsights valuation={derivedValuation} />
+              <TaxInsightsCarousel valuation={derivedValuation} />
             </section>
+
+            <ComparableSales sales={comparableSales} lastUpdatedIso={comparableLastUpdatedIso} />
           </div>
 
           <div className="space-y-6">
